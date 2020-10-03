@@ -1,0 +1,97 @@
+---
+title: "Proceso de acompañamiento coyuntural y automatización de la Encuesta Nacional de Empleo"
+subtitle: "Subproceso de codificación<br/>Subdirección Técnica"  
+author: 
+date: '`r Sys.Date()`'
+output:
+  xaringan::moon_reader:
+    seal: false
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+#![](imagenes/logo_portada2.PNG)
+
+---
+
+
+class: center, middle
+
+.linea-superior[]
+.linea-inferior[]
+
+
+<img src="imagenes/logo_portada2.png" width="200" />
+
+
+## Capacitación en R y herramientas de productividad
+
+## Proyecto Estratégico Servicios Compartidos para la Producción Estadística
+
+## Funciones y estilo de código
+
+### Septiembre 2020
+
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(message = FALSE) 
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+#style_duo_accent(
+ # primary_color = "#1381B0",
+  #secondary_color = "#FF961C",
+  #inverse_header_color = "#FFFFFF"
+#)
+```
+
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Contenidos de hoy
+
+--
+
+- ¿Qué es una función?
+
+--
+
+- ¿Por qué son importantes las funciones?
+
+--
+
+- Implementación en R
+
+--
+
+- Mi primera función
+
+--
+
+- Estilo de código
+
+
+---
+
+class: center, middle
+
+.linea-superior[]
+.linea-inferior[]
+<img src="imagenes/logo_portada2.png" width="200" />
+
+
+## Capacitación en R y herramientas de productividad
+
+## Proyecto Estratégico Servicios Compartidos para la Producción Estadística
+
+## Funciones y estilo de código
+
+### Septiembre 2020
