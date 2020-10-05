@@ -30,7 +30,7 @@ class: center, middle
 
 ## Proyecto Estratégico Servicios Compartidos para la Producción Estadística
 
-## Funciones y estilo de código
+## validate y profundización de dplyr
 
 ### Septiembre 2020
 
@@ -60,26 +60,639 @@ background-position: 100% 0%
 
 --
 
-- ¿Qué es una función?
+- Introducción a `validate`
 
 --
 
-- ¿Por qué son importantes las funciones?
+- Elementos básicos del paquete
 
 --
 
-- Implementación en R
+- Ejemplos concretos
 
 --
 
-- Mi primera función
+- Un pocos más sobre `dplyr`
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Motivación
+
+En general, los datasets con los que trabajamos contienen errores
+
+- Encuestas
+
+- Registros administrativos
 
 --
 
-- Estilo de código
+Antes de realizar cualquier análisis, es necesario evaluar **consistencia** y **editar** los datos
+
+--
+
+Ya contamos con herramientas poderosas para la edición
+
+- `dplyr`
+
+- funciones personalizadas
+
+--
+
+Nos hace falta una buena herramienta para evaluar la consistencia
 
 
 ---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Introducción a validate
+
+Creado por Mark Van der Loo y Edwin de Jonge
+
+--
+
+Este paquete nos permite: 
+
+- Testear datos contra reglas predefinidas
+
+--
+
+- Investigar y visualizar los resultados de la validación
+
+--
+
+- Mantener los indicadores de calidad separados de los datos
+
+--
+
+- Importar y exportar sets de reglas desde formatos estructurados
+
+--
+
+### Nos concentraremos en los primeros 3 puntos
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Introducción a validate
+
+Creado por Mark Van der Loo y Edwin de Jonge
+
+Este paquete nos permite: 
+
+.caja-texto[
+- Testear datos contra reglas predefinidas
+
+- Investigar y visualizar los resultados de la validación
+
+- Mantener los indicadores de calidad separados de los datos
+]
+
+- Importar y exportar sets de reglas desde formatos estructurados
+
+### Nos concentraremos en los primeros 3 puntos
+
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Los datos
+
+Trabajaremos con la base de nacimientos 
+
+--
+
+Lo primero que haremos es editar el nombre de las variables con la función creada la clase anterior
+
+
+```{r}
+library(tidyverse)
+load(file = "datos/nacimientos_2017.RData")
+
+#Cargar función
+source("scripts/helpers.R")
+
+#Editar nombres
+names(nacimientos) <- editar_nombres(names(nacimientos))
+
+```
+
+--
+
+.discussion[
+- Tenemos guardada la función `editar_nombres` en un script
+- Con la función `source` ejecutamos un script  
+]
+
+
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Creando las reglas
+
+Lo primero es crear nuestras reglas
+
+--
+
+Usaremos la función `validator`
+
+--
+
+Queremos comprobar si los valores de la variable **sexo** y **mes_ins** están dentro de los rangos permitidos
+
+
+
+```{r}
+library(validate)
+
+validadores <- validator(
+  rango_sexo = sexo == 1 | sexo == 2,
+  rango_dia = dia_ins >= 1 & dia_ins <= 31,
+  rango_dia_30 = if (mes_ins == 4 | mes_ins == 6 | mes_ins == 9 | mes_ins == 11 ) dia_ins <= 30,
+  rango_peso = peso <= 6000
+)
+```
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Confrontando contra nuestros datos
+
+La función `confront` nos permite contrastar 
+
+Con `summary` obtenemos un resumen de la validación
+
+--
+
+```{r}
+consistencia <-  confront(nacimientos, validadores)
+summary(consistencia)
+```
+
+--
+
+Podemos obtener el resultado para cada registro 
+
+```{r}
+resultados <- aggregate(consistencia, by = 'record')
+```
+
+--
+
+### ¿A quién corresponde cada fila?
+
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Agregando un identificador
+
+Usamos nuestro conocimiento de `dplyr`
+
+La función `row_number` genera una columna con números correlativos
+
+```{r}
+nacimientos <- nacimientos %>% 
+  mutate(id = row_number())
+```
+
+--
+
+Volvemos a utilizar `confront`, pero ahora agregamos el parámetro *key*
+
+```{r}
+consistencia <-  confront(nacimientos, validadores, key = "id")
+resultados <- aggregate(consistencia, by = 'record')
+```
+
+--
+
+### Ahora podemos unir la tabla de datos con nuestros resultados mediante el identificador
+
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Uniendo ambas tablas
+
+Nuevamente, usamos nuestro conocimiento de `dplyr`
+
+```{r}
+val_nacimientos <- nacimientos %>% 
+  left_join(resultados, by = "id")
+```
+
+--
+
+¿Qué pasa si quiero saber cuál es la regla que falló?
+
+.center[
+<img src="https://media.giphy.com/media/3o7buirYcmV5nSwIRW/giphy.gif" width="200" />
+
+]
+
+--
+
+Hasta el momento sólo sabemos que alguna de las reglas falló, pero no cuál de ellas
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Explorando las reglas
+
+Al convertir el objeto *confront* a *dataframe*, obtenemos una tabla con 876.744 filas  
+
+```{r}
+id_regla <- as.data.frame(consistencia)
+nrow(id_regla)
+```
+
+.center[
+<img src="https://media.giphy.com/media/3o7buirYcmV5nSwIRW/giphy.gif" width="200" />
+]
+
+--
+
+Obtenemos una fila por cada registro-regla
+
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Explorando las reglas
+
+Filtremos las reglas que fallaron
+
+```{r}
+explorar <- id_regla %>% 
+  filter(value == FALSE) %>% 
+  arrange(id)
+```
+
+--
+
+Ahora tenemos más información sobre qué fue lo que falló
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Ejercicio 
+
+En la base nacimientos_2017_e introduje errores de rango en las columnas *dia_ins, peso* y *edad_p*
+
+Generemos las reglas de validación usando `validator`
+
+- Para peso y edad, usen rangos que consideren aceptables
+
+Generemos un reporte de los valores inválidos, usando `confront`
+
+**Nota:** Recuerda agregar el parámetro *key* en `confront` 
+
+--
+
+```{r}
+load(file = "datos/nacimientos_2017_e.RData")
+reglas <- validator(
+  rango_dia = dia_ins >= 1 & dia_ins <= 31,
+  rango_peso = peso >= 1 & peso <= 6000,
+  rango_edad_p = edad_p >= 10 & edad_p <= 150
+)
+consistencia <- confront(nacimientos_e, reglas, key = "id") 
+#summary(consistencia)
+```
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Continuación ejercicio 
+
+Genera una tabla que contenga solo las filas inválidas por *dia_ins*
+
+Usa *join* para unir ambas tablas (nacimientos y errores) y chequea el motivo por el cual los datos son inválidos   
+
+--
+
+```{r}
+error_rango_dia <- as.data.frame(consistencia) %>% 
+  filter(name == "rango_dia" & value == F) %>% 
+  left_join(nacimientos_e %>% select(dia_ins, id), by = "id")
+```
+
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Consistencia entre variables 
+
+En ciertas ocasiones es relevante evaluar la consistencia entre variables 
+
+--
+
+Típicamente, esto ocurre en encuestas de hogares, pero también en RRAA
+
+--
+
+Muchas veces se requiere crear variables intermedias
+
+--
+
+```{r}
+library(lubridate)
+entre_variables <-  validator(
+  fecha_nac := as_date(paste(ano_nac, mes_nac, dia_nac,  sep = "-")),
+  fecha_ins := as_date(paste(ano_ins, mes_ins, dia_ins, sep = "-")),
+  ins_nac = fecha_nac <= fecha_ins
+)
+summary(confront(nacimientos, entre_variables)) %>% 
+  select(-expression)
+```
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Visualización del reporte
+
+Volvamos al caso de los días fuera de rango
+
+```{r, highlight.output=c(2)}
+summary(consistencia) %>% 
+  select(-expression)
+```
+Queremos graficar los datos de la primera fila
+
+```{r, eval=F}
+summary(consistencia) %>% 
+  filter(name == "rango_dia") %>% 
+  select(passes, fails) %>% 
+  pivot_longer(cols = c(passes, fails),  names_to = "tipo", values_to = "frecuencia") %>% 
+  ggplot(aes(x = tipo, y = frecuencia)) +
+  geom_bar(stat = "identity")
+
+
+```
+
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Visualización del reporte
+
+```{r, echo=F, fig.align="center", fig.height=5, fig.width=5}
+summary(consistencia) %>% 
+  filter(name == "rango_dia") %>% 
+  select(passes, fails) %>% 
+  pivot_longer(cols = c(passes, fails),  names_to = "tipo", values_to = "frecuencia") %>% 
+  ggplot(aes(x = tipo, y = frecuencia)) +
+  geom_bar(stat = "identity")
+
+```
+
+---
+
+
+<br>
+<br>
+
+.center[
+
+.texto_intermedio[
+Segundo tema de esta clase: 
+
+profundización `dplyr`
+]
+
+]
+
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Más sobre dplyr
+
+Cuando vimos `summarise` y `mutate` el enfoque estuvo siempre en resolver una tarea a la vez
+
+
+```{r, eval=F}
+nacimientos <- nacimientos %>% 
+  mutate(edad2 = edad**2)
+
+```
+
+--
+
+Para realizar varias tareas simultaneamente vimos cosas como esta
+
+--
+
+```{r}
+nacimientos <- nacimientos %>% 
+  mutate(edad_m2 = edad_m**2,
+         comuna2 = tolower(comuna))
+
+nacimientos %>% 
+  group_by(sexo) %>% 
+  summarise(media_peso = mean(peso),
+            media_talla = mean(talla))
+
+```
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Más sobre dplyr
+
+¿Qué pasa si queremos repetir la misma operación para un gran número de variables?
+
+--
+
+Queremos sumar la cantidad de mujeres y hombres para todas las columnas de proyecciones de población 
+
+--
+
+Una posibilidad es incluir en `summarise` la suma para todas las columnas
+
+```{r, eval=T}
+library(readxl)
+proyecciones <- read_excel("../sesion_5/data/estimaciones-y-proyecciones-2002-2035-comunas.xlsx")
+names(proyecciones) <- editar_nombres(names(proyecciones))
+
+proyecciones %>% 
+  group_by(sexo) %>% 
+  summarise(media_2002 = sum(poblacion_2002),
+            media_2003 = sum(poblacion_2003))
+```
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Familias _at y _all
+
+### ¿Podemos hacerlo mejor?
+
+--
+
+`dplyr` nos ofrece los sufijos *_at* y *_all* para realizar operaciones sobre varias columnas
+
+```{r}
+proyecciones %>% 
+  group_by(sexo) %>% 
+  summarise_at(.vars = vars(starts_with("poblacion")), .funs = sum) %>%  #<<
+  select(1:5)
+               
+
+```
+
+.vars: indica las variables sobre las cuales se hace la operación (todas las proyecciones)
+
+.funs: indica la operación que se quiere hacer (estamos sumando)
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Familias _at y _all
+
+Usando *_all* escribimos lo siguiente
+
+```{r}
+proyecciones %>% 
+  group_by(sexo) %>% 
+  select(starts_with("poblacion")) %>% 
+  summarise_all(.funs = sum) %>%  #<<
+  select(1:5)
+```
+
+Seleccionamos las columnas que nos interesan
+
+`summarise_all` aplica la función a todas las variables del *dataframe*
+
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Familias _at y _all
+
+En el caso de `mutate` se procede de manera similar 
+
+--
+
+Queremos estandarizar todas las variables de proyecciones
+
+```{r}
+estandarizar <- function(x) {
+    (x - mean(x)) / sd(x)  
+} 
+
+proyec_estandar <- proyecciones %>% 
+  mutate_at(.vars = vars(starts_with("poblacion")), .funs = estandarizar)
+
+```
+
+--
+
+Para crear nuevas variables, debemos usar un nombre para la función
+
+```{r}
+proyec_estandar <- proyecciones %>% 
+  mutate_at(.vars = vars(starts_with("poblacion")), .funs = list(est = estandarizar))
+```
+
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Familias _at y _all
+
+
+```{r}
+proyecciones %>%
+  summarise_if(is.numeric, sum)
+```
+
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Condicionales
+
+Queremos crear una recodificación de la variable *edad*
+
+Hasta el momento, la herramienta con la que contamos es *if_else*
+
+```{r}
+proyecciones <- proyecciones %>% 
+  mutate(edad_tr = if_else(edad <= 9, 1, 0),
+         edad_tr = if_else(edad >= 10 & edad <= 19, 2, edad_tr),
+         edad_tr = if_else(edad >= 20 & edad <= 29, 3, edad_tr))
+```
+
+
+```{r}
+proyecciones <- proyecciones %>% 
+  mutate(edad_tr = case_when(
+    edad <= 9 ~ 1,
+    edad >= 10 & edad <= 19 ~ 2,
+    edad >= 20 & edad <= 29 ~ 3
+  )
+  )
+```
+
+
+---
+
+
 
 class: center, middle
 

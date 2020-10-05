@@ -315,6 +315,13 @@ table.dataTable.hover tbody tr:hover, table.dataTable.display tbody tr:hover {
   background: #E7E4E3;
 }
 
+.caja-texto {
+  border: 2px solid black;
+  margin: 0;
+  padding: 0px;
+}
+
+
 
 table,  td {
   border: 1px solid black;
