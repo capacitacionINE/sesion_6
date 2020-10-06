@@ -60,6 +60,10 @@ background-position: 100% 0%
 
 --
 
+- Un poco más sobre `dplyr`
+
+--
+
 - Introducción a `validate`
 
 --
@@ -70,9 +74,384 @@ background-position: 100% 0%
 
 - Ejemplos concretos
 
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Los datos
+
+Trabajaremos con la base de nacimientos 
+
 --
 
-- Un pocos más sobre `dplyr`
+Lo primero que haremos es editar el nombre de las variables con la función creada la clase anterior
+
+
+```{r}
+library(tidyverse)
+load(file = "datos/nacimientos_2017.RData")
+
+#Cargar función
+source("scripts/helpers.R")
+
+#Editar nombres
+names(nacimientos) <- editar_nombres(names(nacimientos))
+
+```
+
+--
+
+.discussion[
+- Tenemos guardada la función `editar_nombres` en un script
+- Con la función `source` ejecutamos un script  
+]
+
+
+---
+
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Más sobre dplyr
+
+Cuando vimos `summarise` y `mutate` el enfoque estuvo siempre en resolver una tarea a la vez
+
+
+```{r, eval=F}
+
+
+nacimientos <- nacimientos %>% 
+  mutate(edad_p2 = edad_p**2)
+
+```
+
+--
+
+Para realizar varias tareas simultaneamente vimos cosas como esta
+
+--
+
+```{r}
+nacimientos <- nacimientos %>% 
+  mutate(edad_m2 = edad_m**2,
+         comuna2 = tolower(comuna))
+
+nacimientos %>% 
+  group_by(sexo) %>% 
+  summarise(media_peso = mean(peso),
+            media_talla = mean(talla))
+
+```
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Más sobre dplyr
+
+¿Qué pasa si queremos repetir la misma operación para un gran número de variables?
+
+--
+
+Por ejemplo, sumar la cantidad de mujeres y hombres para todas las columnas de proyecciones de población 
+
+--
+
+Una posibilidad es incluir en `summarise` la suma para todas las columnas
+
+```{r, eval=T}
+library(readxl)
+proyecciones <- read_excel("../sesion_5/data/estimaciones-y-proyecciones-2002-2035-comunas.xlsx")
+names(proyecciones) <- editar_nombres(names(proyecciones))
+
+proyecciones %>% 
+  group_by(sexo) %>% 
+  summarise(suma_2002 = sum(poblacion_2002),
+            suma_2003 = sum(poblacion_2003))
+```
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Funciones _at y _all
+
+### ¿Podemos hacerlo mejor?
+
+--
+
+`dplyr` nos ofrece los sufijos *_at* y *_all* para realizar operaciones sobre varias columnas
+
+--
+
+`summarise_at`
+
+`summarise_all`
+
+--
+
+`_at`: puede entenderse como "en" o "a"
+
+`_all`: aplicar a toda la tabla
+
+--
+
+Existe, además, el sufijo `_foreach`, que no veremos en esta clase 
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Funciones _at y _all
+
+Aplicar la función `sum` a todas las variables de población 
+
+```{r}
+proyecciones %>% 
+  group_by(sexo) %>% 
+  summarise_at(.vars = vars(starts_with("poblacion")), .funs = sum) %>%  #<<
+  select(1:5)
+```
+
+`.vars`: indica las variables sobre las cuales se hace la operación (todas las proyecciones)
+
+`.funs`: indica la operación que se quiere hacer (estamos sumando)
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Rodeo nerd de programación
+
+--
+
+La función `summarise_at` implementa un ciclo for
+
+--
+
+"Por detrás" se ejecuta código de C++
+
+--
+
+C++ es un lenguaje de más bajo nivel, mucho más veloz que `R`
+
+
+--
+
+Fin del rodeo
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Funciones _at y _all
+
+Usando *_all* escribimos lo siguiente
+
+```{r}
+proyecciones %>% 
+  group_by(sexo) %>% 
+  select(starts_with("poblacion")) %>% 
+  summarise_all(.funs = sum) %>%  #<<
+  select(1:5)
+```
+
+Seleccionamos las columnas que nos interesan
+
+`summarise_all` aplica la función a todas las variables del *dataframe*
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Funciones _at y _all
+
+En el caso de `mutate` se procede de manera similar 
+
+--
+
+Queremos estandarizar todas las variables de proyecciones
+
+```{r}
+estandarizar <- function(x) {
+    (x - mean(x)) / sd(x)  
+} 
+
+proyec_estandar <- proyecciones %>% 
+  mutate_at(.vars = vars(starts_with("poblacion")), .funs = estandarizar)
+
+```
+
+--
+
+Para crear nuevas variables, debemos usar un nombre para la función
+
+```{r}
+proyec_estandar <- proyecciones %>% 
+  mutate_at(.vars = vars(starts_with("poblacion")), .funs = list(est = estandarizar))
+```
+
+Esto genera nuevas variables con sufijo
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Ejercicio
+
+En la base de nacimientos, queremos usar la función reescalar (de la clase pasada) para las siguientes variables:
+*edad_p, peso, talla, edad_m.*
+
+En lugar de transformar las variables, debes crear nuevas, usando el sufijo "res"
+
+--
+
+```{r}
+reescalar <- function(x) {
+  (x - min(x)) / (max(x) - min(x))
+}  
+  
+nacimientos <- nacimientos %>% 
+  mutate_at(.vars = vars(edad_p, peso, talla, edad_m), .funs = list(res = reescalar))
+```
+
+
+
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Bonus track: summarise_if
+
+Especialmente útil cuando se quiere aplicar una función para un tipo de datos
+
+```{r}
+proyecciones %>%
+  summarise_if(is.numeric, sum) %>% 
+  select(1:5)
+```
+
+En este caso, aplicamos `sum` a todas las variables numéricas
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# case_when
+
+Queremos recodificar la variable *edad* y llevarla a tramos
+
+Hasta el momento, la herramienta con la que contamos es *if_else*
+
+```{r}
+proyecciones <- proyecciones %>% 
+  mutate(edad_tr = if_else(edad <= 9, 1, 0),
+         edad_tr = if_else(edad >= 10 & edad <= 19, 2, edad_tr),
+         edad_tr = if_else(edad >= 20 & edad <= 29, 3, edad_tr),
+         edad_tr = if_else(edad >= 30 & edad <= 39, 4, edad_tr),
+         edad_tr = if_else(edad >= 40, 5, edad_tr))
+
+table(proyecciones$edad_tr)
+
+```
+
+--
+
+### ¿Podemos hacerlo mejor?
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# case_when
+
+`case_when` genera el mismo resultado, pero escribiendo un poco menos
+
+```{r}
+proyecciones <- proyecciones %>% 
+  mutate(edad_tr = case_when(
+    edad <= 9               ~ 1,
+    edad >= 10 & edad <= 19 ~ 2,
+    edad >= 20 & edad <= 29 ~ 3,
+    edad >= 30 & edad <= 39 ~ 4,
+    edad >= 40              ~ 5
+  )
+)
+```
+
+--
+
+El uso de "~" es obligatorio 
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Comentario final sobre dplyr
+
+Con estos últimos contenidos hemos revisado las principales funciones de `dplyr` 
+
+
+--
+
+- `_join`
+
+- `mutate` (_at, _all)
+
+- `summarise` (_at, _all)
+
+- `filter`
+
+- `select`
+
+- `group_by`
+
+- `arrange`
+
+- `bind_rows`
+
+--
+
+Ya cuentan con un set de herramientas para enfrentar una gran parte del trabajo con datos
+
+--
+
+Siempre pueden usar este [torpedo](https://4.files.edl.io/b9e2/07/12/19/142839-a23788fb-1d3a-4665-9dc4-33bfd442c296.pdf) para mirar rápido el nombre de las funciones
+
+---
+
+<br>
+<br>
+
+.center[
+
+.texto_intermedio[
+Segundo tema de esta clase: 
+
+Introducción a `validate`
+]
+
+]
+
 
 ---
 
@@ -160,40 +539,6 @@ Este paquete nos permite:
 ### Nos concentraremos en los primeros 3 puntos
 
 
----
-
-background-image: url("imagenes/fondo2.PNG")
-background-size: contain;
-background-position: 100% 0%
-
-# Los datos
-
-Trabajaremos con la base de nacimientos 
-
---
-
-Lo primero que haremos es editar el nombre de las variables con la función creada la clase anterior
-
-
-```{r}
-library(tidyverse)
-load(file = "datos/nacimientos_2017.RData")
-
-#Cargar función
-source("scripts/helpers.R")
-
-#Editar nombres
-names(nacimientos) <- editar_nombres(names(nacimientos))
-
-```
-
---
-
-.discussion[
-- Tenemos guardada la función `editar_nombres` en un script
-- Con la función `source` ejecutamos un script  
-]
-
 
 
 ---
@@ -222,6 +567,7 @@ validadores <- validator(
   rango_sexo = sexo == 1 | sexo == 2,
   rango_dia = dia_ins >= 1 & dia_ins <= 31,
   rango_dia_30 = if (mes_ins == 4 | mes_ins == 6 | mes_ins == 9 | mes_ins == 11 ) dia_ins <= 30,
+  rango_dia_28 = if (mes_ins == 2) dia_ins <= 28,
   rango_peso = peso <= 6000
 )
 ```
@@ -244,17 +590,60 @@ consistencia <-  confront(nacimientos, validadores)
 summary(consistencia)
 ```
 
---
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Leyendo el resumen
+
+
+```{r, echo=F}
+summary(consistencia) %>% 
+  select(-expression)
+```
+*name*: nombre de la regla
+
+*items*: total de filas evaluadas
+
+*passes*: casos que pasan la regla
+
+*fails*: casos que no pasan la regla
+
+*nNA*: valores con NA
+
+*error*: se produce error en la evaluación
+
+*expression*: expresión evaluada
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Obteniendo tabla completa
 
 Podemos obtener el resultado para cada registro 
+
+--
 
 ```{r}
 resultados <- aggregate(consistencia, by = 'record')
 ```
 
+`aggregate` retorna una fila para cada registro de la tabla evaluada
+
+
 --
 
 ### ¿A quién corresponde cada fila?
+
+.center[
+<img src="https://media.giphy.com/media/3o7buirYcmV5nSwIRW/giphy.gif" width="250" />
+]
+
 
 
 ---
@@ -313,7 +702,7 @@ val_nacimientos <- nacimientos %>%
 
 --
 
-Hasta el momento sólo sabemos que alguna de las reglas falló, pero no cuál de ellas
+Hasta el momento sabemos que alguna de las reglas falló, pero no cuál de ellas
 
 ---
 background-image: url("imagenes/fondo2.PNG")
@@ -322,7 +711,7 @@ background-position: 100% 0%
 
 # Explorando las reglas
 
-Al convertir el objeto *confront* a *dataframe*, obtenemos una tabla con 876.744 filas  
+Al convertir el objeto *confront* a *dataframe*, obtenemos una tabla con 1.095.930 filas  
 
 ```{r}
 id_regla <- as.data.frame(consistencia)
@@ -336,6 +725,16 @@ nrow(id_regla)
 --
 
 Obtenemos una fila por cada registro-regla
+
+Tenemos 5 reglas, por ende, tendremos 5 filas por cada registro original
+
+--
+
+- *name*: nombre de la regla
+
+- *value*: TRUE o FALSE (pasa o no pasa la regla)
+
+- *expression*: expresión evaluada
 
 
 ---
@@ -366,7 +765,7 @@ background-position: 100% 0%
 
 En la base nacimientos_2017_e introduje errores de rango en las columnas *dia_ins, peso* y *edad_p*
 
-Generemos las reglas de validación usando `validator`
+Generemos las reglas de validación para *dia_ins, peso* y *edad_p*,  usando `validator`
 
 - Para peso y edad, usen rangos que consideren aceptables
 
@@ -401,9 +800,11 @@ Usa *join* para unir ambas tablas (nacimientos y errores) y chequea el motivo po
 --
 
 ```{r}
-error_rango_dia <- as.data.frame(consistencia) %>% 
+as.data.frame(consistencia) %>% 
   filter(name == "rango_dia" & value == F) %>% 
-  left_join(nacimientos_e %>% select(dia_ins, id), by = "id")
+  left_join(nacimientos_e %>% select(dia_ins, id), by = "id") %>% 
+  slice(1:5) %>% 
+  select(-expression)
 ```
 
 
@@ -452,7 +853,7 @@ Volvamos al caso de los días fuera de rango
 summary(consistencia) %>% 
   select(-expression)
 ```
-Queremos graficar los datos de la primera fila
+Queremos graficar los datos de las tres reglas
 
 ```{r, eval=F}
 summary(consistencia) %>% 
@@ -475,29 +876,14 @@ background-position: 100% 0%
 
 ```{r, echo=F, fig.align="center", fig.height=5, fig.width=5}
 summary(consistencia) %>% 
-  filter(name == "rango_dia") %>% 
-  select(passes, fails) %>% 
+  #filter(name == "rango_dia") %>% 
+  select(name, passes, fails) %>% 
   pivot_longer(cols = c(passes, fails),  names_to = "tipo", values_to = "frecuencia") %>% 
   ggplot(aes(x = tipo, y = frecuencia)) +
-  geom_bar(stat = "identity")
+  geom_bar(stat = "identity") +
+  facet_wrap(~name)
 
 ```
-
----
-
-
-<br>
-<br>
-
-.center[
-
-.texto_intermedio[
-Segundo tema de esta clase: 
-
-profundización `dplyr`
-]
-
-]
 
 
 ---
@@ -505,32 +891,151 @@ background-image: url("imagenes/fondo2.PNG")
 background-size: contain;
 background-position: 100% 0%
 
-# Más sobre dplyr
+# Muchas variables y reglas
 
-Cuando vimos `summarise` y `mutate` el enfoque estuvo siempre en resolver una tarea a la vez
+En encuestas de hogares es común tener muchas variables
 
+--
+
+A veces, no es tan cómodo tener solo un objeto *validator*
+
+
+```{r}
+reglas <- validator(
+  tipo_sexo = is.numeric(sexo),
+  rango_sexo = sexo == 1 | sexo == 2,
+  tipo_dia = is.numeric(dia_ins),
+  rango_dia = dia_ins >= 1 & dia_ins <= 31,
+  rango_dia_30 = if (mes_ins == 4 | mes_ins == 6 | mes_ins == 9 | mes_ins == 11 ) dia_ins <= 30,
+  rango_dia_28 = if (mes_ins == 2) dia_ins <= 28,
+  tipo_peso = is.numeric(peso),
+  rango_peso = peso <= 6000,
+  tipo_talla = is.numeric(talla),
+  rango_talla = (talla >= 15 & talla <= 80) | talla == 99
+)
+
+```
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Muchas variables y reglas
+
+```{r}
+summary(confront(nacimientos, reglas))
+
+```
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Separando reglas
+
+
+```{r}
+val_sexo <- validator(
+  tipo_sexo = is.numeric(sexo),
+  rango_sexo = sexo == 1 | sexo == 2
+)
+
+val_dia_ins <- validator(
+  tipo_dia = is.numeric(dia_ins),
+  rango_dia = dia_ins >= 1 & dia_ins <= 31,
+  rango_dia_30 = if (mes_ins == 4 | mes_ins == 6 | mes_ins == 9 | mes_ins == 11 ) dia_ins <= 30
+)
+
+val_peso <- validator(
+  tipo_peso = is.numeric(peso),
+  rango_peso = peso <= 6000
+)
+
+```
 
 ```{r, eval=F}
-nacimientos <- nacimientos %>% 
-  mutate(edad2 = edad**2)
+summary(confront(nacimientos, val_sexo))
+summary(confront(nacimientos, val_dia_ins))
+summary(confront(nacimientos, val_peso))
+```
 
+
+---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Problema
+
+### Si tenemos 200 variables, tendremos que escribir 200 líneas de código
+
+.center[
+<img src="https://media.giphy.com/media/OjmrBW4ZQbWjkq6RkC/giphy.gif" width="400" />
+]
+
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# purrr al rescate
+
+Volvamos al problema sobre la cantidad de objetos
+
+--
+
+Tenemos 3 vectores y queremos obtener la suma de cada uno de ellos
+
+
+```{r}
+v1 <- 1:5
+v2 <- 2:6
+v3 <- 3:7
+
+sum(v1)
+sum(v2)
+sum(v3)
 ```
 
 --
 
-Para realizar varias tareas simultaneamente vimos cosas como esta
+Si tuviese 100 vectores, la estrategia se haría inviable
+
+---
+
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
+
+# Función map
+
+`map` tiene dos argumentos: 
+
+- lista con objetos
+
+- una función que debe aplicarse a los objetos
+
+--
+
+Puedo generar una lista que agrupe los 3 vectores 
+
+```{r}
+vectores <- list(v1, v2, v3)
+```
+
+Pueden pensarlo como una "caja" que contiene elementos
 
 --
 
 ```{r}
-nacimientos <- nacimientos %>% 
-  mutate(edad_m2 = edad_m**2,
-         comuna2 = tolower(comuna))
-
-nacimientos %>% 
-  group_by(sexo) %>% 
-  summarise(media_peso = mean(peso),
-            media_talla = mean(talla))
+library(purrr)
+sumas <- map(vectores, sum)
+sumas[[2]]
 
 ```
 
@@ -540,158 +1045,28 @@ background-image: url("imagenes/fondo2.PNG")
 background-size: contain;
 background-position: 100% 0%
 
-# Más sobre dplyr
+# Función map
 
-¿Qué pasa si queremos repetir la misma operación para un gran número de variables?
+Volvamos al problema sobre los validadores
 
---
+Queremos aplicar este código para cada una de las reglas establecidas 
 
-Queremos sumar la cantidad de mujeres y hombres para todas las columnas de proyecciones de población 
-
---
-
-Una posibilidad es incluir en `summarise` la suma para todas las columnas
-
-```{r, eval=T}
-library(readxl)
-proyecciones <- read_excel("../sesion_5/data/estimaciones-y-proyecciones-2002-2035-comunas.xlsx")
-names(proyecciones) <- editar_nombres(names(proyecciones))
-
-proyecciones %>% 
-  group_by(sexo) %>% 
-  summarise(media_2002 = sum(poblacion_2002),
-            media_2003 = sum(poblacion_2003))
-```
-
----
-
-background-image: url("imagenes/fondo2.PNG")
-background-size: contain;
-background-position: 100% 0%
-
-# Familias _at y _all
-
-### ¿Podemos hacerlo mejor?
+`summary(confront(nacimientos, .x))`
 
 --
-
-`dplyr` nos ofrece los sufijos *_at* y *_all* para realizar operaciones sobre varias columnas
 
 ```{r}
-proyecciones %>% 
-  group_by(sexo) %>% 
-  summarise_at(.vars = vars(starts_with("poblacion")), .funs = sum) %>%  #<<
-  select(1:5)
-               
-
-```
-
-.vars: indica las variables sobre las cuales se hace la operación (todas las proyecciones)
-
-.funs: indica la operación que se quiere hacer (estamos sumando)
-
----
-background-image: url("imagenes/fondo2.PNG")
-background-size: contain;
-background-position: 100% 0%
-
-# Familias _at y _all
-
-Usando *_all* escribimos lo siguiente
-
-```{r}
-proyecciones %>% 
-  group_by(sexo) %>% 
-  select(starts_with("poblacion")) %>% 
-  summarise_all(.funs = sum) %>%  #<<
-  select(1:5)
-```
-
-Seleccionamos las columnas que nos interesan
-
-`summarise_all` aplica la función a todas las variables del *dataframe*
-
-
----
-background-image: url("imagenes/fondo2.PNG")
-background-size: contain;
-background-position: 100% 0%
-
-# Familias _at y _all
-
-En el caso de `mutate` se procede de manera similar 
-
---
-
-Queremos estandarizar todas las variables de proyecciones
-
-```{r}
-estandarizar <- function(x) {
-    (x - mean(x)) / sd(x)  
-} 
-
-proyec_estandar <- proyecciones %>% 
-  mutate_at(.vars = vars(starts_with("poblacion")), .funs = estandarizar)
+vals <- list(val_sexo, val_dia_ins, val_peso)
+resultado <- map(vals, ~summary(confront(nacimientos, .x) ))
+resultado[[3]]
 
 ```
 
 --
 
-Para crear nuevas variables, debemos usar un nombre para la función
-
-```{r}
-proyec_estandar <- proyecciones %>% 
-  mutate_at(.vars = vars(starts_with("poblacion")), .funs = list(est = estandarizar))
-```
-
+### Ahora podemos dividir nuestras reglas en muchos objetos y ello no implicará mayor esfuerzo
 
 ---
-
-background-image: url("imagenes/fondo2.PNG")
-background-size: contain;
-background-position: 100% 0%
-
-# Familias _at y _all
-
-
-```{r}
-proyecciones %>%
-  summarise_if(is.numeric, sum)
-```
-
-
----
-background-image: url("imagenes/fondo2.PNG")
-background-size: contain;
-background-position: 100% 0%
-
-# Condicionales
-
-Queremos crear una recodificación de la variable *edad*
-
-Hasta el momento, la herramienta con la que contamos es *if_else*
-
-```{r}
-proyecciones <- proyecciones %>% 
-  mutate(edad_tr = if_else(edad <= 9, 1, 0),
-         edad_tr = if_else(edad >= 10 & edad <= 19, 2, edad_tr),
-         edad_tr = if_else(edad >= 20 & edad <= 29, 3, edad_tr))
-```
-
-
-```{r}
-proyecciones <- proyecciones %>% 
-  mutate(edad_tr = case_when(
-    edad <= 9 ~ 1,
-    edad >= 10 & edad <= 19 ~ 2,
-    edad >= 20 & edad <= 29 ~ 3
-  )
-  )
-```
-
-
----
-
 
 
 class: center, middle
