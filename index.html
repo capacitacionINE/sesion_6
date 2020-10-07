@@ -249,11 +249,11 @@ La función `summarise_at` implementa un ciclo for
 
 --
 
-"Por detrás" se ejecuta código de C++
+"Por detrás", se ejecuta código de C++ (probablemente, también C y/o Fortran) 
 
 --
 
-C++ es un lenguaje de más bajo nivel, mucho más veloz que `R`
+Lenguajes compilados de más bajo nivel, mucho más veloces que `R`
 
 
 --
@@ -1079,7 +1079,7 @@ background-position: 100% 0%
 
 # Problema
 
-### Si tenemos 200 variables, tendremos que escribir 200 líneas de código
+### Si tenemos 200 variables, tendríamos que escribir 200 líneas de código
 
 .center[
 &lt;img src="https://media.giphy.com/media/OjmrBW4ZQbWjkq6RkC/giphy.gif" width="400" /&gt;
@@ -1132,7 +1132,7 @@ sum(v3)
 
 --
 
-Si tuviese 100 vectores, la estrategia se haría inviable
+Si tuviésemos 100 vectores, la estrategia se haría inviable
 
 ---
 
@@ -1191,22 +1191,38 @@ Queremos aplicar este código para cada una de las reglas establecidas
 
 ```r
 vals &lt;- list(val_sexo, val_dia_ins, val_peso)
-resultado &lt;- map(vals, ~summary(confront(nacimientos, .x) ))
-resultado[[3]]
+*resultado &lt;- map(vals, ~summary(confront(nacimientos, .x) ))
+resultado[[3]] %&gt;% 
+  select(-expression)
 ```
 
 ```
-##         name  items passes fails nNA error warning             expression
-## 1  tipo_peso      1      1     0   0 FALSE   FALSE       is.numeric(peso)
-## 2 rango_peso 219186 218813   373   0 FALSE   FALSE (peso - 6000) &lt;= 1e-08
+##         name  items passes fails nNA error warning
+## 1  tipo_peso      1      1     0   0 FALSE   FALSE
+## 2 rango_peso 219186 218813   373   0 FALSE   FALSE
 ```
 
 --
 
-### Ahora podemos dividir nuestras reglas en muchos objetos y ello no implicará mayor esfuerzo
+### Ahora podemos dividir nuestras reglas en muchos objetos y ello no implicará esfuerzo adicional
 
 ---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
 
+# Tarea para la casa
+
+Usando la base de nacimientos, genera reglas para cada una de las siguientes columnas: *dia_nac, mes_nac, ano_nac, semanas, hij_vivos, hij_total*. Usa rangos que te parezcan razonables. 
+
+Confronta cada una de las reglas con la base de nacimientos. Es recomendable que lo hagas con la función `map`
+
+Escoge tres variables y genera una visualización de los resultados
+
+
+
+
+---
 
 class: center, middle
 
