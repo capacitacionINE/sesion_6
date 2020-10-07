@@ -1067,7 +1067,22 @@ resultado[[3]]
 ### Ahora podemos dividir nuestras reglas en muchos objetos y ello no implicará mayor esfuerzo
 
 ---
+background-image: url("imagenes/fondo2.PNG")
+background-size: contain;
+background-position: 100% 0%
 
+# Tarea para la casa
+
+Usando la base de nacimientos, genera reglas para cada una de las siguientes columnas: *dia_nac, mes_nac, ano_nac, semanas, hij_vivos, hij_total.*. Usa rangos que te parezcan razonables. 
+
+Confronta cada una de las reglas con la base de nacimientos. Es recomendable que lo hagas con la función `map`
+
+Escoge tres variables y genera una visualización de los resultados
+
+
+
+
+---
 
 class: center, middle
 
